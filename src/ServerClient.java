@@ -1,3 +1,5 @@
+import com.sun.istack.internal.NotNull;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -46,6 +48,8 @@ public class ServerClient {
     }
 
     void handlePacket(int packetIndex, byte[] fileData) {
+        if(fileData == null) {
+        }
         if (packetIndex >= windowBegin && packetIndex <= windowEnd) {
             if(!finished) {
                 if (packetIndex == windowBegin) {
@@ -57,7 +61,7 @@ public class ServerClient {
                     while (!finished && timeStamps[windowBegin] >= 0) {
                         try {
                             writeDataAndMoveWindow(fileBuffer.get(windowBegin));
-                            fileBuffer.remove(windowBegin);
+                            fileBuffer.remove(windowBegin - 1);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

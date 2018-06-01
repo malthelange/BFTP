@@ -178,5 +178,4 @@ public class Client implements Runnable {
         resultBuffer.put(packetData);
         return resultBuffer.array();
     }
-
 }

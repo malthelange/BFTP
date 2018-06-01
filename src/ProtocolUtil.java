@@ -1,5 +1,5 @@
 public class ProtocolUtil {
-    static final int WINDOW_SIZE = 2;
+    static final int WINDOW_SIZE = 20;
     static int BLOCK_SIZE = 500;
 
     static int getWindowEnd(long fileSize, int windowBegin) {
