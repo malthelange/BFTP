@@ -17,7 +17,7 @@ public class ClientTest {
         int index = random.nextInt();
         byte[] packetData = new byte[ProtocolUtil.BLOCK_SIZE];
         random.nextBytes(packetData);
-        byte[] resBuffer = new Client("whatever").getPacket(R, S, index, packetData);
+        byte[] resBuffer = new Client("whatever", "127.0.0.1").getPacket(R, S, index, packetData);
         ByteBuffer resWrapped = ByteBuffer.wrap(resBuffer);
         Assert.assertThat(resBuffer.length, IsEqual.equalTo(ProtocolUtil.BLOCK_SIZE + 16));
         Assert.assertThat(resWrapped.getInt(), IsEqual.equalTo(R));

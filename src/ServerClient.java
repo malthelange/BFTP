@@ -16,9 +16,10 @@ public class ServerClient {
     private int windowEnd;
     private long fileSize;
     private String filename;
-    private Map<Integer,byte[]> fileBuffer;
+    private Map<Integer, byte[]> fileBuffer;
     private long timeStamps[];
     private boolean finished;
+    Random random;
 
     ServerClient(InetAddress address, int port, int randomInteger, long fileSize) {
         this.address = address;
@@ -27,11 +28,12 @@ public class ServerClient {
         this.windowBegin = 0;
         this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.fileSize = fileSize;
-        this.filename = address.getHostName() + port + System.currentTimeMillis();
+        this.filename = address.getHostAddress() + port + System.currentTimeMillis();
         this.fileBuffer = new HashMap<>();
         this.timeStamps = new long[(int) (Math.floor(fileSize / ProtocolUtil.BLOCK_SIZE)) + 1];
         this.finished = false;
         Arrays.fill(timeStamps, -1);
+        random = new Random();
     }
 
     public boolean equals(Object o) {
@@ -48,10 +50,10 @@ public class ServerClient {
     }
 
     void handlePacket(int packetIndex, byte[] fileData) {
-        if(fileData == null) {
+        if (fileData == null) {
         }
         if (packetIndex >= windowBegin && packetIndex <= windowEnd) {
-            if(!finished) {
+            if (!finished) {
                 if (packetIndex == windowBegin) {
                     try {
                         writeDataAndMoveWindow(fileData);
@@ -76,8 +78,7 @@ public class ServerClient {
             do {
                 success = sendAcknowledge(packetIndex);
             } while (!success);
-        }
-        else if (packetIndex < windowBegin) {
+        } else if (packetIndex < windowBegin) {
             boolean success;
             do {
                 success = sendAcknowledge(packetIndex);
@@ -97,7 +98,9 @@ public class ServerClient {
                 port);
         try {
             DatagramSocket socket = new DatagramSocket();
-            socket.send(packet);
+            if (random.nextDouble() > ProtocolUtil.PLP) {
+                socket.send(packet);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -107,7 +110,7 @@ public class ServerClient {
 
     private void writeDataAndMoveWindow(byte[] fileData) throws IOException {
         FileOutputStream outputStream = new FileOutputStream(filename, true);
-        if(windowBegin != fileSize / ProtocolUtil.BLOCK_SIZE) {
+        if (windowBegin != fileSize / ProtocolUtil.BLOCK_SIZE) {
             outputStream.write(fileData);
         } else {
             int remainder = Math.toIntExact(fileSize % ProtocolUtil.BLOCK_SIZE);

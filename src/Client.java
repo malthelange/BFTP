@@ -22,12 +22,19 @@ public class Client implements Runnable {
     private int serverPort = 4450;
     boolean[] received;
     long[] timestamps;
+    private InetAddress remoteHost;
+    private long timeout = 250;
 
     public static void main(String[] args) {
-        new Thread(new Client(args[0])).start();
+        new Thread(new Client(args[0], args[1])).start();
     }
 
-    public Client(String filename) {
+    public Client(String filename, String hostString) {
+        try {
+            this.remoteHost = InetAddress.getByName(hostString);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         this.port = 4451;
         this.fileName = filename;
         this.file = new File(fileName);
@@ -69,7 +76,7 @@ public class Client implements Runnable {
         while (!done) {
             checkTimestamps();
             try {
-                Thread.sleep(200);
+                Thread.sleep(timeout);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -93,9 +100,11 @@ public class Client implements Runnable {
             datagramPacket = new DatagramPacket(
                     packetData,
                     packetData.length,
-                    InetAddress.getLocalHost(),
+                    remoteHost,
                     serverPort);
-            socket.send(datagramPacket);
+            if (random.nextDouble() > ProtocolUtil.PLP) {
+                socket.send(datagramPacket);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -129,7 +138,7 @@ public class Client implements Runnable {
     private synchronized void checkTimestamps() {
         for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
             long currentTimeMillis = System.currentTimeMillis();
-            if (!received[packetIndex] && currentTimeMillis - timestamps[packetIndex] >= 250) {
+            if (!received[packetIndex] && currentTimeMillis - timestamps[packetIndex] >= timeout) {
                 sendPacket(packetIndex);
             }
         }
