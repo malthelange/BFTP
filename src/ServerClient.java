@@ -27,7 +27,7 @@ public class ServerClient {
         this.fileSize = fileSize;
         this.filename = address.getHostName() + port + System.currentTimeMillis();
         this.fileBuffer = new HashMap<>();
-        this.timeStamps = new long[(int) (Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE)) + 1];
+        this.timeStamps = new long[(int) (Math.floor(fileSize / ProtocolUtil.BLOCK_SIZE)) + 1];
         this.finished = false;
         Arrays.fill(timeStamps, -1);
     }
@@ -46,26 +46,34 @@ public class ServerClient {
     }
 
     void handlePacket(int packetIndex, byte[] fileData) {
-        if (packetIndex >= windowBegin && packetIndex <= windowEnd && !finished) {
-            if (packetIndex == windowBegin) {
-                try {
-                    writeDataAndMoveWindow(fileData);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                while (!finished && timeStamps[windowBegin] >= 0) {
+        if (packetIndex >= windowBegin && packetIndex <= windowEnd) {
+            if(!finished) {
+                if (packetIndex == windowBegin) {
                     try {
-                        writeDataAndMoveWindow(fileBuffer.get(windowBegin));
-                        fileBuffer.remove(windowBegin);
+                        writeDataAndMoveWindow(fileData);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                    while (!finished && timeStamps[windowBegin] >= 0) {
+                        try {
+                            writeDataAndMoveWindow(fileBuffer.get(windowBegin));
+                            fileBuffer.remove(windowBegin);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } else {
+                    // TODO: might want to only put when the timestamp is empty.
+                    fileBuffer.put(packetIndex, fileData);
+                    timeStamps[packetIndex] = System.currentTimeMillis();
                 }
-            } else {
-                // TODO: might want to only put when the timestamp is empty.
-                fileBuffer.put(packetIndex, fileData);
-                timeStamps[packetIndex] = System.currentTimeMillis();
             }
+            boolean success;
+            do {
+                success = sendAcknowledge(packetIndex);
+            } while (!success);
+        }
+        else if (packetIndex < windowBegin) {
             boolean success;
             do {
                 success = sendAcknowledge(packetIndex);

@@ -38,8 +38,8 @@ public class Client implements Runnable {
         this.fileSize = file.length();
         this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.dataInputStream = null;
-        received = new boolean[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
-        timestamps = new long[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
+        received = new boolean[(int) Math.floor(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
+        timestamps = new long[(int) Math.floor(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
         Arrays.fill(received, false);
         fileData = new HashMap<>();
         try {
