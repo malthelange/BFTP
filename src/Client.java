@@ -147,7 +147,7 @@ public class Client implements Runnable {
                 return;
             }
         }
-        if (!readWindowFromFile(windowEnd, windowEnd + difference)) {
+        if (!readWindowFromFile(windowEnd + 1, windowEnd + difference)) {
             System.out.println("Error reading window");
         }
         windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);

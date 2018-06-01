@@ -95,7 +95,7 @@ public class ServerClient {
 
     private void writeDataAndMoveWindow(byte[] fileData) throws IOException {
         FileOutputStream outputStream = new FileOutputStream(filename, true);
-        if(windowBegin != windowEnd) {
+        if(windowBegin != fileSize / ProtocolUtil.BLOCK_SIZE) {
             outputStream.write(fileData);
         } else {
             int remainder = Math.toIntExact(fileSize % ProtocolUtil.BLOCK_SIZE);
