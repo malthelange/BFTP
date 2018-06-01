@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class ServerClientMeta {
+public class ServerClient {
     private InetAddress address;
     private int port;
     private int randomInteger;
@@ -19,12 +19,12 @@ public class ServerClientMeta {
     private long timeStamps[];
     private boolean finished;
 
-    ServerClientMeta(InetAddress address, int port, int randomInteger, long fileSize) {
+    ServerClient(InetAddress address, int port, int randomInteger, long fileSize) {
         this.address = address;
         this.port = port;
         this.randomInteger = randomInteger;
         this.windowBegin = 0;
-        this.windowEnd = ProtocolUtil.getWindowEnd(fileSize);
+        this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.fileSize = fileSize;
         this.filename = address.getHostName() + port + System.currentTimeMillis();
         this.fileBuffer = new byte[ProtocolUtil.BLOCK_SIZE * (windowEnd + 1)];
@@ -36,7 +36,7 @@ public class ServerClientMeta {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ServerClientMeta that = (ServerClientMeta) o;
+        ServerClient that = (ServerClient) o;
         return port == that.port &&
                 randomInteger == that.randomInteger &&
                 Objects.equals(address, that.address);
@@ -109,8 +109,7 @@ public class ServerClientMeta {
         outputStream.write(fileData);
         outputStream.close();
         windowBegin++;
-        // TODO Der er noget her der ikke virker
-        windowEnd = Math.min(windowEnd + 1, ProtocolUtil.getWindowEnd(fileSize));
+        windowEnd = Math.min(windowEnd + 1, ProtocolUtil.getWindowEnd(fileSize, windowBegin));
         if (windowBegin > windowEnd) {
             finished = true;
         }

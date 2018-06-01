@@ -10,7 +10,7 @@ public class Client implements Runnable {
     private Random random;
     private int randomInt;
     private boolean done;
-    private int windowBeginning;
+    private int windowBegin;
     private long fileSize;
     private int windowEnd;
     private DataInputStream dataInputStream;
@@ -28,9 +28,9 @@ public class Client implements Runnable {
         this.random = new Random();
         this.randomInt = random.nextInt();
         this.done = false;
-        this.windowBeginning = 0;
+        this.windowBegin = 0;
         this.fileSize = file.length();
-        this.windowEnd = ProtocolUtil.getWindowEnd(fileSize);
+        this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.dataInputStream = null;
     }
 
@@ -46,7 +46,7 @@ public class Client implements Runnable {
             e.printStackTrace();
             return;
         }
-        for (int packetIndex = windowBeginning; packetIndex <= windowEnd; packetIndex++) {
+        for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
             byte[] packetData = getPacketAtIndex(randomInt, packetIndex, fileSize, fileData);
             DatagramPacket datagramPacket;
             try {
@@ -77,7 +77,7 @@ public class Client implements Runnable {
         int read = 0;
         try {
             read = dataInputStream.read(fileData,
-                    windowBeginning * ProtocolUtil.BLOCK_SIZE,
+                    windowBegin * ProtocolUtil.BLOCK_SIZE,
                     fileData.length);
         } catch (IOException e) {
             e.printStackTrace();

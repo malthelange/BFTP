@@ -9,7 +9,7 @@ import java.util.List;
 public class Server {
 
     public static void main(String[] args) {
-        List<ServerClientMeta> clients = new ArrayList<>();
+        List<ServerClient> clients = new ArrayList<>();
         DatagramSocket datagramSocket = null;
         try {
             datagramSocket = new DatagramSocket(4450);
@@ -28,7 +28,7 @@ public class Server {
                 datagramSocket.receive(datagramPacket);
                 byte[] packetData = datagramPacket.getData();
                 ByteBuffer wrappedPacketData = ByteBuffer.wrap(packetData);
-                ServerClientMeta client = new ServerClientMeta(
+                ServerClient client = new ServerClient(
                         datagramPacket.getAddress(),
                         datagramPacket.getPort(),
                         wrappedPacketData.getInt(),
