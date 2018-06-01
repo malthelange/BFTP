@@ -4,12 +4,12 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class Client implements Runnable {
-    private int port;
+    int port;
     private String fileName;
     private File file;
     private Random random;
     private int randomInt;
-    private boolean done;
+    boolean done;
     private int windowBegin;
     private long fileSize;
     private int windowEnd;
@@ -22,7 +22,7 @@ public class Client implements Runnable {
     }
 
     public Client(String filename) {
-        this.port = 4450;
+        this.port = 4451;
         this.fileName = filename;
         this.file = new File(fileName);
         this.random = new Random();
@@ -93,7 +93,6 @@ public class Client implements Runnable {
     }
 
     public synchronized static void updateWindow() {
-
     }
 
     private byte[] getPacketAtIndex(

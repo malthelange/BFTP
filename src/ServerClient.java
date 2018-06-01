@@ -4,8 +4,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Objects;
+import java.util.*;
 
 public class ServerClient {
     private InetAddress address;
@@ -15,7 +14,7 @@ public class ServerClient {
     private int windowEnd;
     private long fileSize;
     private String filename;
-    private byte[] fileBuffer;
+    private Map<Integer,byte[]> fileBuffer;
     private long timeStamps[];
     private boolean finished;
 
@@ -27,7 +26,7 @@ public class ServerClient {
         this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.fileSize = fileSize;
         this.filename = address.getHostName() + port + System.currentTimeMillis();
-        this.fileBuffer = new byte[ProtocolUtil.BLOCK_SIZE * (windowEnd + 1)];
+        this.fileBuffer = new HashMap<>();
         this.timeStamps = new long[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
         this.finished = false;
         Arrays.fill(timeStamps, -1);
@@ -43,7 +42,6 @@ public class ServerClient {
     }
 
     public int hashCode() {
-
         return Objects.hash(address, port, randomInteger);
     }
 
@@ -57,24 +55,15 @@ public class ServerClient {
                 }
                 while (timeStamps[windowBegin] >= 0 && !finished) {
                     try {
-                        System.arraycopy(
-                                fileBuffer,
-                                windowBegin * ProtocolUtil.BLOCK_SIZE,
-                                fileData,
-                                0,
-                                fileData.length);
-                        writeDataAndMoveWindow(fileData);
+                        writeDataAndMoveWindow(fileBuffer.get(windowBegin));
+                        fileBuffer.remove(windowBegin);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
             } else {
-                System.arraycopy(
-                        fileData,
-                        0,
-                        fileBuffer,
-                        ProtocolUtil.BLOCK_SIZE * packetIndex,
-                        fileData.length);
+                // TODO: might want to only put when the timestamp is empty.
+                fileBuffer.put(packetIndex, fileData);
                 timeStamps[packetIndex] = System.currentTimeMillis();
             }
             boolean success;
