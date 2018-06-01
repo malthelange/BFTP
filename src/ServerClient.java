@@ -98,7 +98,7 @@ public class ServerClient {
         outputStream.write(fileData);
         outputStream.close();
         windowBegin++;
-        windowEnd = Math.min(windowEnd + 1, ProtocolUtil.getWindowEnd(fileSize, windowBegin));
+        windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         if (windowBegin > windowEnd) {
             finished = true;
         }

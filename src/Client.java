@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 public class Client implements Runnable {
@@ -8,14 +9,16 @@ public class Client implements Runnable {
     private String fileName;
     private File file;
     private Random random;
-    private int randomInt;
+    int randomInteger;
     boolean done;
-    private int windowBegin;
+    int windowBegin;
     private long fileSize;
     private int windowEnd;
     private DataInputStream dataInputStream;
     private byte[] fileData;
     private DatagramSocket datagramSocket;
+    boolean[] received = new boolean[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
+    long[] timestamps = new long[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
 
     public static void main(String[] args) {
         new Thread(new Client(args[0])).start();
@@ -26,12 +29,13 @@ public class Client implements Runnable {
         this.fileName = filename;
         this.file = new File(fileName);
         this.random = new Random();
-        this.randomInt = random.nextInt();
+        this.randomInteger = random.nextInt();
         this.done = false;
         this.windowBegin = 0;
         this.fileSize = file.length();
         this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.dataInputStream = null;
+        Arrays.fill(received, false);
     }
 
     @Override
@@ -46,23 +50,46 @@ public class Client implements Runnable {
             e.printStackTrace();
             return;
         }
-        for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
-            byte[] packetData = getPacketAtIndex(randomInt, packetIndex, fileSize, fileData);
-            DatagramPacket datagramPacket;
+        if (!sendPackets()){
+            System.out.println("Error in sending packets");
+            return;
+        }
+        new Thread(new AcknowledgeListener(this)).start();
+        while (!done) {
+            checkTimestamps();
             try {
-                datagramPacket = new DatagramPacket(
-                        packetData,
-                        packetData.length,
-                        InetAddress.getLocalHost(),
-                        port);
-                datagramSocket.send(datagramPacket);
-            } catch (IOException e) {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
                 e.printStackTrace();
-                return;
             }
         }
-        while (!done) {
+    }
+
+    private boolean sendPackets() {
+        for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
+            if(!received[packetIndex]) {
+                if (!sendPacket(packetIndex)) return false;
+                timestamps[packetIndex] = System.currentTimeMillis();
+            }
         }
+        return true;
+    }
+
+    private boolean sendPacket(int packetIndex) {
+        byte[] packetData = getPacketAtIndex(randomInteger, packetIndex, fileSize, fileData);
+        DatagramPacket datagramPacket;
+        try {
+            datagramPacket = new DatagramPacket(
+                    packetData,
+                    packetData.length,
+                    InetAddress.getLocalHost(),
+                    port);
+            datagramSocket.send(datagramPacket);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 
     private boolean readWindowFromFile() {
@@ -89,10 +116,30 @@ public class Client implements Runnable {
         return true;
     }
 
-    private synchronized static void checkTimestamps() {
+    private synchronized void checkTimestamps() {
+        for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
+            long currentTimeMillis = System.currentTimeMillis();
+            if(!received[packetIndex] && currentTimeMillis - timestamps[packetIndex] >= 250) {
+                sendPacket(packetIndex);
+            }
+        }
     }
 
-    public synchronized static void updateWindow() {
+    public synchronized void updateWindow() {
+        //Ryk vinduet så langt som vi har fået receivet, stop hvis vi er færdige, læs vinduet,
+        //send det der mangler
+        while (received[windowBegin]) {
+            windowBegin++;
+            if (windowBegin > fileSize / ProtocolUtil.BLOCK_SIZE) {
+                done = true;
+                return;
+            }
+        }
+        windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
+        if(!readWindowFromFile()) {
+            System.out.println("Error reading window");
+        }
+        sendPackets();
     }
 
     private byte[] getPacketAtIndex(
@@ -107,7 +154,7 @@ public class Client implements Runnable {
         resultPacket.putInt(randomInt);
         resultPacket.putLong(fileSize);
         resultPacket.putInt(packetIndex);
-        resultPacket.put(fileData, packetIndex * ProtocolUtil.BLOCK_SIZE, packetDataSize);
+        resultPacket.put(fileData, (packetIndex - windowBegin) * ProtocolUtil.BLOCK_SIZE, packetDataSize);
         return resultPacket.array();
     }
 

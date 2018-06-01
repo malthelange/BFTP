@@ -23,7 +23,14 @@ public class AcknowledgeListener implements Runnable {
                 socket.receive(datagramPacket);
                 byte[] packetData = datagramPacket.getData();
                 ByteBuffer wrappedPacketData = ByteBuffer.wrap(packetData);
-
+                int randomInteger = wrappedPacketData.getInt();
+                int packetIndex = wrappedPacketData.getInt();
+                if(client.randomInteger == randomInteger) {
+                    client.received[packetIndex] = true;
+                }
+                if(packetIndex == client.windowBegin) {
+                    client.updateWindow();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
