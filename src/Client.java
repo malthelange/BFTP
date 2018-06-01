@@ -17,9 +17,9 @@ public class Client implements Runnable {
     private DataInputStream dataInputStream;
     private byte[] fileData;
     DatagramSocket socket;
-    boolean[] received = new boolean[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
-    long[] timestamps = new long[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
     private int serverPort = 4450;
+    boolean[] received;
+    long[] timestamps;
 
     public static void main(String[] args) {
         new Thread(new Client(args[0])).start();
@@ -36,7 +36,10 @@ public class Client implements Runnable {
         this.fileSize = file.length();
         this.windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
         this.dataInputStream = null;
+        received = new boolean[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
+        timestamps = new long[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
         Arrays.fill(received, false);
+
     }
 
     @Override
@@ -105,9 +108,8 @@ public class Client implements Runnable {
         fileData = new byte[Math.toIntExact(readSize)];
         int read = 0;
         try {
-            read = dataInputStream.read(fileData,
-                    windowBegin * ProtocolUtil.BLOCK_SIZE,
-                    Math.toIntExact(readSize));
+            int offset = windowBegin * ProtocolUtil.BLOCK_SIZE;
+            read = dataInputStream.read(fileData, offset, Math.toIntExact(readSize));
         } catch (IOException e) {
             e.printStackTrace();
         }
