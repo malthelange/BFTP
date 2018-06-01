@@ -104,6 +104,7 @@ public class Client implements Runnable {
     }
 
     private boolean readWindowFromFile(int readWindowBegin, int readWindowEnd) {
+        readWindowEnd = Math.toIntExact(Math.min(readWindowEnd, fileSize / ProtocolUtil.BLOCK_SIZE));
         for (int packetIndex = readWindowBegin; packetIndex <= readWindowEnd; packetIndex++) {
             // Size of the packet or the remaining data in the file.
             int newPacketSize = Math.toIntExact(Math.min(
