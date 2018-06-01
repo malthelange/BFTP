@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 
 public class AcknowledgeListener implements Runnable {
     private Client client;
-    DatagramSocket socket;
 
     public AcknowledgeListener(Client client) {
         this.client = client;
@@ -15,12 +14,11 @@ public class AcknowledgeListener implements Runnable {
     public void run() {
         while (!client.done) {
             try {
-                socket = new DatagramSocket(client.port);
                 byte[] receivedBuffer = new byte[ProtocolUtil.BLOCK_SIZE + 16];
                 DatagramPacket datagramPacket = new DatagramPacket(
                         receivedBuffer,
                         receivedBuffer.length);
-                socket.receive(datagramPacket);
+                client.socket.receive(datagramPacket);
                 byte[] packetData = datagramPacket.getData();
                 ByteBuffer wrappedPacketData = ByteBuffer.wrap(packetData);
                 int randomInteger = wrappedPacketData.getInt();

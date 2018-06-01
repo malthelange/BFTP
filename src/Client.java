@@ -16,9 +16,10 @@ public class Client implements Runnable {
     private int windowEnd;
     private DataInputStream dataInputStream;
     private byte[] fileData;
-    private DatagramSocket datagramSocket;
-    boolean[] received = new boolean[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
-    long[] timestamps = new long[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
+    DatagramSocket socket;
+    boolean[] received = new boolean[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
+    long[] timestamps = new long[(int) Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE) + 1];
+    private int serverPort = 4450;
 
     public static void main(String[] args) {
         new Thread(new Client(args[0])).start();
@@ -41,16 +42,16 @@ public class Client implements Runnable {
     @Override
     public void run() {
         if (!readWindowFromFile()) return;
-        datagramSocket = null;
+        socket = null;
         try {
-            datagramSocket = new DatagramSocket();
+            socket = new DatagramSocket(port);
 
         } catch (SocketException e) {
             System.out.println("Couldn't initialize socket");
             e.printStackTrace();
             return;
         }
-        if (!sendPackets()){
+        if (!sendPackets()) {
             System.out.println("Error in sending packets");
             return;
         }
@@ -67,7 +68,7 @@ public class Client implements Runnable {
 
     private boolean sendPackets() {
         for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
-            if(!received[packetIndex]) {
+            if (!received[packetIndex]) {
                 if (!sendPacket(packetIndex)) return false;
                 timestamps[packetIndex] = System.currentTimeMillis();
             }
@@ -83,8 +84,8 @@ public class Client implements Runnable {
                     packetData,
                     packetData.length,
                     InetAddress.getLocalHost(),
-                    port);
-            datagramSocket.send(datagramPacket);
+                    serverPort);
+            socket.send(datagramPacket);
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -99,13 +100,14 @@ public class Client implements Runnable {
             e.printStackTrace();
             return false;
         }
-        long readSize = Math.min(fileSize, ProtocolUtil.BLOCK_SIZE * (windowEnd + 1));
+        long readSize = Math.min(fileSize,
+                ProtocolUtil.BLOCK_SIZE * (ProtocolUtil.getWindowEnd(fileSize, 0) + 1));
         fileData = new byte[Math.toIntExact(readSize)];
         int read = 0;
         try {
             read = dataInputStream.read(fileData,
                     windowBegin * ProtocolUtil.BLOCK_SIZE,
-                    fileData.length);
+                    Math.toIntExact(readSize));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -119,7 +121,7 @@ public class Client implements Runnable {
     private synchronized void checkTimestamps() {
         for (int packetIndex = windowBegin; packetIndex <= windowEnd; packetIndex++) {
             long currentTimeMillis = System.currentTimeMillis();
-            if(!received[packetIndex] && currentTimeMillis - timestamps[packetIndex] >= 250) {
+            if (!received[packetIndex] && currentTimeMillis - timestamps[packetIndex] >= 250) {
                 sendPacket(packetIndex);
             }
         }
@@ -136,7 +138,7 @@ public class Client implements Runnable {
             }
         }
         windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
-        if(!readWindowFromFile()) {
+        if (!readWindowFromFile()) {
             System.out.println("Error reading window");
         }
         sendPackets();
@@ -147,8 +149,10 @@ public class Client implements Runnable {
             int packetIndex,
             long fileSize,
             byte[] fileData) {
+        int dataSentFromWindowAtIndex = ProtocolUtil.BLOCK_SIZE * (packetIndex - windowBegin);
+        int remainingData = fileData.length - dataSentFromWindowAtIndex;
         int packetDataSize = Math.min(
-                fileData.length - ProtocolUtil.BLOCK_SIZE * packetIndex, // the remaining data
+                remainingData,
                 ProtocolUtil.BLOCK_SIZE);
         ByteBuffer resultPacket = ByteBuffer.allocate(4 + 8 + 4 + packetDataSize);
         resultPacket.putInt(randomInt);

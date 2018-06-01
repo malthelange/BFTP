@@ -27,7 +27,7 @@ public class ServerClient {
         this.fileSize = fileSize;
         this.filename = address.getHostName() + port + System.currentTimeMillis();
         this.fileBuffer = new HashMap<>();
-        this.timeStamps = new long[Math.toIntExact(fileSize / ProtocolUtil.BLOCK_SIZE)];
+        this.timeStamps = new long[(int) (Math.ceil(fileSize / ProtocolUtil.BLOCK_SIZE)) + 1];
         this.finished = false;
         Arrays.fill(timeStamps, -1);
     }
@@ -53,7 +53,7 @@ public class ServerClient {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                while (timeStamps[windowBegin] >= 0 && !finished) {
+                while (!finished && timeStamps[windowBegin] >= 0) {
                     try {
                         writeDataAndMoveWindow(fileBuffer.get(windowBegin));
                         fileBuffer.remove(windowBegin);
@@ -95,7 +95,12 @@ public class ServerClient {
 
     private void writeDataAndMoveWindow(byte[] fileData) throws IOException {
         FileOutputStream outputStream = new FileOutputStream(filename, true);
-        outputStream.write(fileData);
+        if(windowBegin != windowEnd) {
+            outputStream.write(fileData);
+        } else {
+            int remainder = Math.toIntExact(fileSize % ProtocolUtil.BLOCK_SIZE);
+            outputStream.write(fileData, 0, remainder);
+        }
         outputStream.close();
         windowBegin++;
         windowEnd = ProtocolUtil.getWindowEnd(fileSize, windowBegin);
